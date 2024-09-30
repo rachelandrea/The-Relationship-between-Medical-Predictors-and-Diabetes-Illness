@@ -1,0 +1,366 @@
+---
+title: "AoL_DMV_Progress"
+author: "Patricia Pepita"
+date: "2023-05-09"
+output: html_document
+---
+
+# 1. Load Data
+```{r}
+getwd()
+```
+
+```{r setup, include=FALSE}
+library(readr)
+Data <- read.csv("diabetes.csv")
+```
+
+
+# 2. Asses the general characteristic of the data set
+## a. Look at the records, variables, and data type
+```{r pressure, echo=FALSE}
+str(Data)
+dim(Data)
+```
+Diabetes dataset has 768 records with 9 variables called Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DiabetesPedigreeFunction, Age, and Outcome.
+All features have numeric data types.
+
+
+## b. Count unique value
+```{r}
+unique(Data$Pregnancies) # 17
+unique(Data$Glucose) # 136
+unique(Data$BloodPressure) # 47
+unique(Data$SkinThickness) # 51
+unique(Data$Insulin) # 186
+```
+```{r}
+unique(Data$BMI) # 248
+unique(Data$DiabetesPedigreeFunction) # 517
+```
+
+```{r}
+unique(Data$Age) # 52
+unique(Data$Outcome) # 2
+```
+
+Pregnancies feature has 17 unique value
+Glucose feature has 136 unique value
+BloodPressure feature has 47 unique value
+SkinThickness feature has 51 unique value
+Insulin feature has 186 unique value
+BMI feature has 248 unique value
+DiabetesPedigreeFunction feature has 517 unique value
+Age feature has 17 unique value
+Outcome feature has 2 unique value
+
+
+## c. Count value that occurs the most
+```{r}
+table(Data$Pregnancies) # 1
+table(Data$Glucose) # 99 & 100
+```
+```{r}
+table(Data$BloodPressure) # 74
+table(Data$SkinThickness) # 0
+```
+
+```{r}
+table(Data$Insulin) # 0
+```
+```{r}
+table(Data$BMI) # 0
+```
+
+```{r}
+table(Data$DiabetesPedigreeFunction) # 0.254 & 0.258
+```
+```{r}
+table(Data$Age)
+table(Data$Outcome)
+```
+Value 1 occurs the most in Pregancies feature with total 135 occurrence
+Value 99 and 100 occurs the most in Glucose feature with total 17 occurrence
+Value 74 occurs the most in BloodPressure feature with total 52 occurrence
+Value 0 occurs the most in SkinThickness, Insulin, and BMI features with each of total occurrence 227, 374, and 11
+Value 0.254 and 0.258 occurs the most in DiabetesPedigreeFunction feature with total 6 occurrence
+Value 22 occurs the most in Age feature with total 72 occurrence
+Value 0 occurs the most in Outcome feature with total 500 occurrence
+
+## d. Check missing value
+```{r}
+sum(Data$Pregnancies == "0") # (tapi ini tidak diangkap 0 value karena 0 disini artinya tidak hamil)
+sum(Data$Glucose == "0")
+sum(Data$BloodPressure == "0")
+sum(Data$SkinThickness == "0")
+sum(Data$Insulin == "0")
+sum(Data$BMI == "0")
+sum(Data$DiabetesPedigreeFunction == "0")
+sum(Data$Age == "0")
+```
+There is no missing value on all of the variables, but there are several variables that have '0' value when they are supposed to filled with non-zero value. Those variables are SkinThickness, Insulin, and BMI.
+
+Pregnancies feature doesn't have any missing "0" value, because it means "not pregnant".
+Glucose feature has 5 "0" value
+BloodPressure feature has 35 "0" value
+SkinThickness feature has 227 "0" value
+Insulin feature has 374 "0" value
+BMI feature have 11 "0" value
+DiabetesPedigreeFunction and Age features don't have any "0" value
+
+Because the Insulin variable and skinThickness have more than 20% of 0 value, we need to remove it.
+
+## e. Remove the Insulin and SkinThickness column
+```{r}
+Data <- subset(Data, select=-c(Insulin, SkinThickness))
+```
+We already remove the Insulin and SkinThickness column, now from the output we can see each of the feature's 5 number summary and mean.
+
+# 3. Descriptive Stats
+```{r}
+summary(Data)
+```
+We already remove the Insulin and SkinThickness column, now from the output we can see each of the feature's 5 number summary and mean.
+
+```{r}
+BasicSummary <- function(df, dgts=3){
+m <- ncol(df)
+varNames <- colnames(df)
+varType <- vector("character", m)
+topLevel <- vector("character", m)
+topCount <- vector("numeric", m)
+missCount <- vector("numeric", m)
+levels <- vector("numeric", m)
+
+for (i in 1:m){
+  x <- df[,i]
+  varType[i] <- class(x)
+  xtab <- table(x, useNA = "ifany")
+  levels[i] <- length(xtab)
+  nums <- as.numeric(xtab)
+  maxnum <- max(nums)
+  topCount[i] <- maxnum
+  maxIndex <- which.max(nums)
+  lvls <- names (xtab)
+  topLevel[i] <- lvls[maxIndex]
+  missIndex <- which((is.na(x)) | (x=="") | (x == " "))
+  missCount[i] <- length(missIndex)
+}
+n <- nrow(df)
+topFrac <- round(topCount/n, digits=dgts)
+missFrac <- round(missCount/n, digits=dgts)
+summaryFrame <- data.frame(variable = varNames, type = varType, levels = levels, topLevel = topLevel,
+                           topCount = topCount, topFrac = topFrac, missFreq = missCount, missFrac = missFrac)
+return(summaryFrame)
+}
+
+BasicSummary(Data)
+```
+From above we could tell there are 7 variables in this dataset, 5 of them  are integer and the other 2 are numeric.
+
+# 4. Plot Data (exploratory visualization)
+## a. Histogram
+```{r}
+library(ggplot2)
+
+par(mfrow=c(2,3))
+pregDist <- hist(Data$Pregnancies, xlab="Pregnancies", main="Pregnancies Histogram")
+glucoseDist <- hist(Data$Glucose, xlab="Glucose Level", main="Glucose Histogram")
+bloodDist <- hist(Data$BloodPressure, xlab="Blood Pressure", main="Blood Pressure Histogram")
+BMIDist <- hist(Data$BMI, xlab="BMI Score", main="BMI Histogram")
+pedigreeDist <- hist(Data$DiabetesPedigreeFunction, xlab="Diabetes Pedigree Function", main="Diabetes Pedigree Histogram")
+ageDist <- hist(Data$Age, xlab="Age", main="Age Histogram")
+```
+Variables that follow normal distribution shape: Glucose, Blood Pressure, and BMI.
+Other Variables (Pregnancies, Diabetes Pedigree, and Age) follow skewed-right model distribution.
+We don't include 'Outcome' histogram since it is a numerical binary data type.
+
+
+## b. Scatterplot
+```{r}
+par(mfrow=c(2,3))
+x <- Data$Glucose
+
+# Add scatterplot and regression line
+plot(x, Data$BMI, main = "Glucose vs BMI",
+     xlab = "Glucose", ylab = "BMI",
+     pch = 19, frame = FALSE)
+abline(lm(Data$BMI ~ x, data = Data), col = "red")
+
+plot(x, Data$Pregnancies, main = "Glucose vs Pregnancies",
+     xlab = "Glucose", ylab = "Pregnancies",
+     pch = 19, frame = FALSE)
+abline(lm(Data$Pregnancies ~ x, data = Data), col = "red")
+
+plot(x, Data$BloodPressure, main = "Glucose vs BloodPressure",
+     xlab = "Glucose", ylab = "BloodPressure",
+     pch = 19, frame = FALSE)
+abline(lm(Data$BloodPressure ~ x, data = Data), col = "red")
+
+plot(x, Data$DiabetesPedigreeFunction, main = "Glucose vs DiabetesPedigreeFunction",
+     xlab = "Glucose", ylab = "DiabetesPedigreeFunction",
+     pch = 19, frame = FALSE)
+abline(lm(Data$DiabetesPedigreeFunction ~ x, data = Data), col = "red")
+
+plot(x, Data$Age, main = "Glucose vs Age",
+     xlab = "Glucose", ylab = "Age",
+     pch = 19, frame = FALSE)
+abline(lm(Data$Age ~ x, data = Data), col = "red")
+```
+From the output we can see each feature's relationship with Glucose through scatter plot except Outcome (because feature Outcome is binary).
+Both BMI and BloodPressure have a good relationship with Glucose, because the data that they have are normally distributed compared to the other features such as Pregnancies, DiabetesPedigreeFunction, and Age. 
+
+## c. Boxplot
+```{r}
+par(mfrow=c(2, 3))
+pregBoxplot <- boxplot(Data$Pregnancies)
+title("Pregnancies Boxplot")
+
+glucoseBoxplot <- boxplot(Data$Glucose)
+title("Glucose Boxplot")
+
+bloodBoxplot <- boxplot(Data$BloodPressure)
+title("Blood Pressure Boxplot")
+
+bmiBoxplot <- boxplot(Data$BMI)
+title("BMI Boxplot")
+
+pedigreeBoxplot <- boxplot(Data$DiabetesPedigreeFunction)
+title("Diabetes Pedigree Function Boxplot")
+
+ageBoxplot <- boxplot(Data$Age)
+title("Age Boxplot")
+```
+Detecting outliers
+- Pregnancies, Diabetes Pedigree, and Age variables have outliers that lie above max value
+- Glucose variable has outliers that lie below min value
+- Blood Pressure and BMI variables have outliers that lie both above max value and below min value
+In addition, BMI, Diabetes Pedigree, and Age variables have many outliers.
+ 
+# 5. Split the data into training and test data set randomly
+```{r}
+set.seed(123)
+n <- nrow(Data) # split data randomly based on row
+train <- sample(n, round(0.7 * n))
+dataTrain <- Data[train,]
+dataValidation <- Data[-train,]
+```
+We set 70% of the data into the training set and 30% of the data into the test set.
+
+# 6. Regression (by Logistic Regression)
+## a. Model building with all of the variables
+```{r}
+# logistic regression with all of the variables 
+logisticFull <- glm(Outcome ~., family = "binomial", data = dataTrain)
+summary(logisticFull)
+```
+From number above, we see that Glucose and BMI features are statistically significant to the Outcome feature.
+
+### The plot
+```{r}
+library(ggplot2)
+ggplot(Data, aes(x=Glucose + BMI + Pregnancies + BloodPressure + Age + DiabetesPedigreeFunction, y=Outcome)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+
+par(mar = c(4, 4, 1, 1))
+curve(predict(logisticFull, data.frame(x=Glucose + BMI + Pregnancies + BloodPressure + Age + DiabetesPedigreeFunction), type="response"), add=TRUE) 
+```
+The higher the value of all independent variables, the Outcome will more likely to be 1 (means having diabetes).
+
+```{r}
+exp(coef(logisticFull))
+```
+Because log(odds) output are hard to interpret, we transform the results by exponentiation.
+
+## b. Model building with certain variables that are statistically significant
+```{r}
+logisticRef <- glm(Outcome ~ Glucose + BMI, family = "binomial", data = dataTrain)
+summary(logisticRef)
+```
+
+### The plot
+```{r}
+library(ggplot2)
+ggplot(Data, aes(x=Glucose + BMI, y=Outcome)) + geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+
+par(mar = c(4, 4, 1, 1))
+curve(predict(logisticRef, data.frame(x=Glucose+BMI), type="response"), add=TRUE) 
+```
+The higher the value of Glucose and BMI, the Outcome will more likely to be 1 (means having diabetes).
+
+```{r}
+exp(coef(logisticRef))
+```
+
+
+## c. Model validation
+```{r}
+pHatFull <- predict(logisticFull, newdata = dataValidation, type = "response")
+pHatRef <- predict(logisticRef, newdata = dataValidation, type = "response")
+```
+
+```{r}
+library(pROC)
+library(caret)
+library(MLmetrics)
+```
+
+## d. Model performance
+#### ROC
+```{r}
+ROCFull <- roc(dataValidation$Outcome, pHatFull, plot = TRUE)
+ROCRef <- roc(dataValidation$Outcome, pHatRef, plot = TRUE)
+ROCFull
+ROCRef
+```
+
+The curve that has a better result is the one that includes all variables because the Y-axis value is higher than the one that is only containing Glucose and BMI variables.
+The higher Y-axis value means a higher number of True Positives than False Negatives.
+We want the curve lies near the upper-left edge.
+
+#### AUC
+```{r}
+AUC(pHatFull, dataValidation$Outcome)
+AUC(pHatRef, dataValidation$Outcome)
+```
+The regression that includes all of the variables has better prediction compared to the one that is not.
+
+## e. Accuracy
+```{r}
+threshold1 <- table(dataValidation$Outcome, pHatFull > 0.5)
+threshold2 <- table(dataValidation$Outcome, pHatRef > 0.5)
+
+accuracyModel1 <- round(sum(diag(threshold1)) / sum(threshold1), 2)
+accuracyModel2 <- round(sum(diag(threshold2)) / sum(threshold2), 2)
+
+sprintf("accuracy model 1: %s", accuracyModel1)
+sprintf("accuracy model 2: %s", accuracyModel2)
+```
+
+The regression that includes all of the variables has higher accuracy compared to the one that is not although the difference is not that much (only 0.01).
+
+## f. Checking sensitivity and specificity 
+```{r}
+# model 1 (containing all variables)
+sensitivityLogistic1 <- Sensitivity(ifelse(pHatFull > 0.5,1,0), dataValidation$Outcome)
+sprintf("Sensitivity model 1 is %s", sensitivityLogistic1)
+
+specificityLogistic1 <- Specificity(ifelse(pHatFull > 0.5,1,0), dataValidation$Outcome)
+sprintf("Specificity model 1 is %s", specificityLogistic1)
+
+# model 2 (containing only Glucose and BMI variables)
+sensitivityLogistic2 <- Sensitivity(ifelse(pHatRef > 0.5,1,0), dataValidation$Outcome)
+sprintf("Sensitivity model 2 is %s", sensitivityLogistic2)
+
+specificityLogistic2 <- Specificity(ifelse(pHatRef > 0.5,1,0), dataValidation$Outcome)
+sprintf("Specificity model 2 is %s", specificityLogistic2)
+```
+Model 1 will likely to predict positive findings for people with Diabetes compared to model 2 since the sensitivity value is higher in model 1. Furthermore, model 1 will likely to predict people without Diabetes compared to the model 2 because the specificity value is higher in model 1.
+Therefore, model 1 has a better identification than model 2.
+In general, the specificity tends to decrease as the sensitivity increases.
+
+# 7. Conclusion
+From the regression, we see that the glucose and BMI value influence wheter a person has diabetes or not.
+Higher glucose level and BMI value resulting a higher chance to have diabetes.
+Moreover, we see that the regression model 1 is better if we compare it to the regression model 2. It is likely because model 1 (which includes all of the independent variables) is more accurate and sensitive in predicting the outcome.
